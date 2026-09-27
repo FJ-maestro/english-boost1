@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#163a63">
+<title>English Boost</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+<section id="home">
+  <header class="hero">
+    <div class="eyebrow">ENGLISH BOOST</div>
+    <h1>The Environment</h1>
+    <p>22 mots et expressions à réviser</p>
+    <div class="stats">
+      <div><b>22</b><span>mots</span></div>
+      <div><b id="homeQcm">—</b><span>QCM</span></div>
+      <div><b id="homeHard">—</b><span>Difficile</span></div>
+    </div>
+  </header>
+
+  <section class="panel">
+    <h2>Mode de révision</h2>
+    <div class="grid">
+      <button type="button" class="pick active" data-mode="qcm">
+        <strong>🎯 QCM</strong><small>4 choix de réponse</small>
+      </button>
+      <button type="button" class="pick" data-mode="hard">
+        <strong>🧠 Difficile</strong><small>Tu vérifies toi-même</small>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Sens de traduction</h2>
+    <div class="grid">
+      <button type="button" class="pick active" data-dir="en-fr">
+        <strong>🇬🇧 → 🇫🇷</strong><small>Anglais vers français</small>
+      </button>
+      <button type="button" class="pick" data-dir="fr-en">
+        <strong>🇫🇷 → 🇬🇧</strong><small>Français vers anglais</small>
+      </button>
+    </div>
+  </section>
+
+  <button type="button" id="start" class="primary">Commencer</button>
+</section>
+
+<section id="quiz" class="hidden">
+  <div class="top">
+    <button type="button" id="back" class="icon">←</button>
+    <div class="grow">
+      <div class="meta"><span id="count"></span><span id="score"></span></div>
+      <div class="bar"><i id="barFill"></i></div>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div id="label" class="label"></div>
+    <div id="question" class="question"></div>
+
+    <div id="qcmBlock">
+      <div id="answers" class="answers"></div>
+      <div id="feedback" class="feedback hidden"></div>
+      <button type="button" id="next" class="primary hidden">Question suivante</button>
+    </div>
+
+    <div id="hardBlock" class="hidden">
+      <button type="button" id="revealBtn" class="primary">Afficher la réponse</button>
+      <div id="revealed" class="revealed hidden"></div>
+      <div id="selfButtons" class="grid hidden">
+        <button type="button" id="nope" class="danger">Je ne savais pas</button>
+        <button type="button" id="knew" class="success">Je savais</button>
+      </div>
+    </div>
+  </section>
+</section>
+
+<section id="result" class="hidden">
+  <section class="panel center">
+    <div class="eyebrow blue">SESSION TERMINÉE</div>
+    <h2>Résultat</h2>
+    <div id="bigScore" class="bigscore">0%</div>
+    <p id="resultText"></p>
+    <p id="resultMode" class="muted"></p>
+    <button type="button" id="restart" class="primary">Recommencer</button>
+    <button type="button" id="homeBtn" class="secondary">Accueil</button>
+  </section>
+</section>
+</main>
+
+<script src="app.js" defer></script>
+</body>
+</html>
