@@ -1,146 +1,24 @@
-const VOCAB = [{"en": "Global warming", "fr": "le réchauffement climatique"}, {"en": "Climate change", "fr": "le changement climatique"}, {"en": "A climatologist", "fr": "un climatologue"}, {"en": "The planet is heating up", "fr": "la planète se réchauffe"}, {"en": "A major shift in the climate", "fr": "un bouleversement climatique"}, {"en": "To alter weather patterns", "fr": "modifier les tendances climatiques"}, {"en": "To be caused by human activities", "fr": "être causé par l’activité humaine"}, {"en": "Ozone depletion", "fr": "la diminution de la couche d’ozone"}, {"en": "Greenhouse gas emissions", "fr": "des émissions de gaz à effet de serre"}, {"en": "To emit carbon dioxide", "fr": "rejeter du gaz carbonique"}, {"en": "The melting of the ice caps", "fr": "la fonte des calottes glaciaires"}, {"en": "Polar ice is thinning", "fr": "la glace polaire s’amenuise"}, {"en": "Coastal flooding", "fr": "des inondations côtières"}, {"en": "The sea level is rising", "fr": "le niveau de la mer augmente"}, {"en": "The Kyoto protocol", "fr": "le protocole de Kyoto"}, {"en": "To meet a target", "fr": "atteindre un objectif"}, {"en": "To make polluters pay", "fr": "faire payer les pollueurs"}, {"en": "To cut one’s emissions", "fr": "réduire ses émissions de CO₂"}, {"en": "Fossil fuels", "fr": "des énergies non renouvelables"}, {"en": "To trap / to store CO₂ in the subsoil / in the seas", "fr": "stocker le CO₂ dans le sous-sol / la mer"}, {"en": "To dispose of the nuclear waste", "fr": "se débarrasser des déchets nucléaires"}, {"en": "To bury", "fr": "enfouir"}];
-
-let mode = 'qcm';
-let dir = 'en-fr';
-let deck = [];
-let index = 0;
-let good = 0;
-let locked = false;
-
-const byId = id => document.getElementById(id);
-const all = sel => Array.from(document.querySelectorAll(sel));
-
-function safeGet(key) {
-  try { return localStorage.getItem(key); } catch(e) { return null; }
-}
-function safeSet(key, val) {
-  try { localStorage.setItem(key, val); } catch(e) {}
-}
-function shuffle(arr) {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-function show(which) {
-  ['home','quiz','result'].forEach(id => byId(id).classList.toggle('hidden', id !== which));
-}
-function qText(item) { return dir === 'en-fr' ? item.en : item.fr; }
-function aText(item) { return dir === 'en-fr' ? item.fr : item.en; }
-
-function updateHome() {
-  const q = safeGet('englishboost_qcm');
-  const h = safeGet('englishboost_hard');
-  if (q) {
-    try { byId('homeQcm').textContent = JSON.parse(q).pct + '%'; } catch(e) {}
-  }
-  if (h) {
-    try { byId('homeHard').textContent = JSON.parse(h).pct + '%'; } catch(e) {}
-  }
-}
-
-function startQuiz() {
-  deck = shuffle(VOCAB);
-  index = 0;
-  good = 0;
-  show('quiz');
-  renderQuestion();
-}
-
-function renderQuestion() {
-  locked = false;
-  const item = deck[index];
-  byId('count').textContent = (index + 1) + ' / ' + deck.length;
-  byId('score').textContent = (index ? Math.round(good / index * 100) : 0) + '%';
-  byId('barFill').style.width = (index / deck.length * 100) + '%';
-  byId('label').textContent = dir === 'en-fr' ? 'Traduis en français' : 'Traduis en anglais';
-  byId('question').textContent = qText(item);
-
-  byId('qcmBlock').classList.toggle('hidden', mode !== 'qcm');
-  byId('hardBlock').classList.toggle('hidden', mode !== 'hard');
-  byId('feedback').className = 'feedback hidden';
-  byId('next').classList.add('hidden');
-  byId('revealed').classList.add('hidden');
-  byId('selfButtons').classList.add('hidden');
-  byId('revealBtn').classList.remove('hidden');
-
-  if (mode === 'qcm') {
-    const correct = aText(item);
-    const wrongs = shuffle(VOCAB.filter(v => v !== item).map(aText)).slice(0,3);
-    const options = shuffle([correct, ...wrongs]);
-    const box = byId('answers');
-    box.innerHTML = '';
-    options.forEach(text => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'answer';
-      b.textContent = text;
-      b.addEventListener('click', () => answerQcm(b, text, correct));
-      box.appendChild(b);
-    });
-  }
-}
-
-function answerQcm(button, chosen, correct) {
-  if (locked) return;
-  locked = true;
-  const ok = chosen === correct;
-  if (ok) good++;
-  all('.answer').forEach(b => {
-    b.disabled = true;
-    if (b.textContent === correct) b.classList.add('correct');
-  });
-  if (!ok) button.classList.add('wrong');
-  const fb = byId('feedback');
-  fb.className = 'feedback ' + (ok ? 'good' : 'bad');
-  fb.textContent = ok ? '✓ Bonne réponse !' : '✕ Bonne réponse : ' + correct;
-  byId('score').textContent = Math.round(good / (index + 1) * 100) + '%';
-  byId('next').classList.remove('hidden');
-}
-
-function advance() {
-  index++;
-  if (index >= deck.length) finish();
-  else renderQuestion();
-}
-
-function finish() {
-  const pct = Math.round(good / deck.length * 100);
-  safeSet('englishboost_' + mode, JSON.stringify({pct:pct, good:good, total:deck.length}));
-  byId('bigScore').textContent = pct + '%';
-  byId('resultText').textContent = good + ' bonnes réponses sur ' + deck.length;
-  byId('resultMode').textContent = (mode === 'qcm' ? 'Mode QCM' : 'Mode difficile') + ' • ' + (dir === 'en-fr' ? 'Anglais → Français' : 'Français → Anglais');
-  show('result');
-  updateHome();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  all('[data-mode]').forEach(btn => btn.addEventListener('click', () => {
-    mode = btn.dataset.mode;
-    all('[data-mode]').forEach(x => x.classList.toggle('active', x === btn));
-  }));
-
-  all('[data-dir]').forEach(btn => btn.addEventListener('click', () => {
-    dir = btn.dataset.dir;
-    all('[data-dir]').forEach(x => x.classList.toggle('active', x === btn));
-  }));
-
-  byId('start').addEventListener('click', startQuiz);
-  byId('next').addEventListener('click', advance);
-  byId('back').addEventListener('click', () => { show('home'); updateHome(); });
-  byId('restart').addEventListener('click', startQuiz);
-  byId('homeBtn').addEventListener('click', () => { show('home'); updateHome(); });
-
-  byId('revealBtn').addEventListener('click', () => {
-    byId('revealed').textContent = aText(deck[index]);
-    byId('revealed').classList.remove('hidden');
-    byId('selfButtons').classList.remove('hidden');
-    byId('revealBtn').classList.add('hidden');
-  });
-  byId('knew').addEventListener('click', () => { good++; advance(); });
-  byId('nope').addEventListener('click', advance);
-
-  updateHome();
-});
+const DEFAULT_VOCAB=[{"en": "Global warming", "fr": "le réchauffement climatique", "group": "Global warming"}, {"en": "Climate change", "fr": "le changement climatique", "group": "Global warming"}, {"en": "A climatologist", "fr": "un climatologue", "group": "Global warming"}, {"en": "The planet is heating up", "fr": "la planète se réchauffe", "group": "Global warming"}, {"en": "A major shift in the climate", "fr": "un bouleversement climatique", "group": "Global warming"}, {"en": "To alter weather patterns", "fr": "modifier les tendances climatiques", "group": "Global warming"}, {"en": "To be caused by human activities", "fr": "être causé par l’activité humaine", "group": "Global warming"}, {"en": "Ozone depletion", "fr": "la diminution de la couche d’ozone", "group": "Global warming"}, {"en": "Greenhouse gas emissions", "fr": "des émissions de gaz à effet de serre", "group": "Global warming"}, {"en": "To emit carbon dioxide", "fr": "rejeter du gaz carbonique", "group": "Global warming"}, {"en": "The melting of the ice caps", "fr": "la fonte des calottes glaciaires", "group": "Global warming"}, {"en": "Polar ice is thinning", "fr": "la glace polaire s’amenuise", "group": "Global warming"}, {"en": "Coastal flooding", "fr": "des inondations côtières", "group": "Global warming"}, {"en": "The sea level is rising", "fr": "le niveau de la mer augmente", "group": "Global warming"}, {"en": "The Kyoto protocol", "fr": "le protocole de Kyoto", "group": "Global warming"}, {"en": "To meet a target", "fr": "atteindre un objectif", "group": "Global warming"}, {"en": "To make polluters pay", "fr": "faire payer les pollueurs", "group": "Global warming"}, {"en": "To cut one’s emissions", "fr": "réduire ses émissions de CO₂", "group": "Global warming"}, {"en": "Fossil fuels", "fr": "des énergies non renouvelables", "group": "Global warming"}, {"en": "To trap / to store CO₂ in the subsoil / in the seas", "fr": "stocker le CO₂ dans le sous-sol / la mer", "group": "Global warming"}, {"en": "To dispose of the nuclear waste", "fr": "se débarrasser des déchets nucléaires", "group": "Global warming"}, {"en": "To bury", "fr": "enfouir", "group": "Global warming"}, {"en": "A shortage / to be short of", "fr": "une pénurie / être à court de", "group": "Alternative energy sources"}, {"en": "To run dry / to be exhausted", "fr": "être épuisé", "group": "Alternative energy sources"}, {"en": "To change our energy policy", "fr": "changer de politique énergétique", "group": "Alternative energy sources"}, {"en": "Fuel-efficient ≠ gas-guzzling", "fr": "économe en carburant ≠ gourmand en carburant", "group": "Alternative energy sources"}, {"en": "To develop alternative energy cars", "fr": "mettre au point des voitures utilisant une autre source d’énergie", "group": "Alternative energy sources"}, {"en": "To car pool", "fr": "faire du covoiturage", "group": "Alternative energy sources"}, {"en": "A carbon tax", "fr": "une taxe sur l’oxyde de carbone", "group": "Alternative energy sources"}, {"en": "Renewable / inexhaustible sources of energy", "fr": "les énergies renouvelables / inépuisables", "group": "Alternative energy sources"}, {"en": "To be environmental friendly", "fr": "qui respecte l’environnement", "group": "Alternative energy sources"}, {"en": "A windmill", "fr": "une éolienne", "group": "Alternative energy sources"}, {"en": "A solar panel", "fr": "un panneau solaire", "group": "Alternative energy sources"}, {"en": "A tidal power station", "fr": "une usine marémotrice", "group": "Alternative energy sources"}, {"en": "Geothermal energy", "fr": "la géothermie", "group": "Alternative energy sources"}, {"en": "Fuel cells", "fr": "les piles à combustible", "group": "Alternative energy sources"}, {"en": "Battery-powered cars (to run on electricity)", "fr": "voitures électriques", "group": "Alternative energy sources"}];
+let mode='qcm',dir='en-fr',deck=[],index=0,good=0,locked=false;
+const $=id=>document.getElementById(id), $$=s=>Array.from(document.querySelectorAll(s));
+const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}}, set=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function custom(){try{return JSON.parse(get('englishboost_custom_vocab')||'[]')}catch(e){return[]}}
+function saveCustom(v){set('englishboost_custom_vocab',JSON.stringify(v))}
+function vocab(){return DEFAULT_VOCAB.concat(custom())}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function show(id){['home','quiz','result','sources'].forEach(x=>$(x).classList.toggle('hidden',x!==id));$('navHome').classList.toggle('active',id!=='sources');$('navSources').classList.toggle('active',id==='sources')}
+function q(i){return dir==='en-fr'?i.en:i.fr} function a(i){return dir==='en-fr'?i.fr:i.en}
+function updateHome(){let qv=get('englishboost_qcm'),hv=get('englishboost_hard');if(qv)try{$('homeQcm').textContent=JSON.parse(qv).pct+'%'}catch(e){};if(hv)try{$('homeHard').textContent=JSON.parse(hv).pct+'%'}catch(e){};$('wordCount').textContent=vocab().length;fillGroups()}
+function fillGroups(){let s=$('groupFilter'),cur=s.value||'all',groups=[...new Set(vocab().map(v=>v.group||'Mes mots'))];s.innerHTML='<option value="all">Tout le vocabulaire</option>';groups.forEach(g=>{let o=document.createElement('option');o.value=g;o.textContent=g;s.appendChild(o)});if([...s.options].some(o=>o.value===cur))s.value=cur}
+function selected(){let g=$('groupFilter').value,v=vocab();return g==='all'?v:v.filter(x=>(x.group||'Mes mots')===g)}
+function start(){deck=shuffle(selected());index=0;good=0;show('quiz');render()}
+function render(){locked=false;let item=deck[index];$('count').textContent=(index+1)+' / '+deck.length;$('score').textContent=(index?Math.round(good/index*100):0)+'%';$('barFill').style.width=(index/deck.length*100)+'%';$('label').textContent=dir==='en-fr'?'Traduis en français':'Traduis en anglais';$('question').textContent=q(item);$('qcmBlock').classList.toggle('hidden',mode!=='qcm');$('hardBlock').classList.toggle('hidden',mode!=='hard');$('feedback').className='feedback hidden';$('next').classList.add('hidden');$('revealed').classList.add('hidden');$('selfButtons').classList.add('hidden');$('revealBtn').classList.remove('hidden');
+if(mode==='qcm'){let correct=a(item),pool=vocab().filter(v=>a(v)!==correct),opts=shuffle([correct,...shuffle(pool.map(a)).slice(0,3)]),box=$('answers');box.innerHTML='';opts.forEach(t=>{let b=document.createElement('button');b.className='answer';b.textContent=t;b.onclick=()=>answer(b,t,correct);box.appendChild(b)})}}
+function answer(btn,chosen,correct){if(locked)return;locked=true;let ok=chosen===correct;if(ok)good++;$$('.answer').forEach(b=>{b.disabled=true;if(b.textContent===correct)b.classList.add('correct')});if(!ok)btn.classList.add('wrong');let f=$('feedback');f.className='feedback '+(ok?'good':'bad');f.textContent=ok?'✓ Bonne réponse !':'✕ Bonne réponse : '+correct;$('score').textContent=Math.round(good/(index+1)*100)+'%';$('next').classList.remove('hidden')}
+function advance(){index++;index>=deck.length?finish():render()}
+function finish(){let pct=Math.round(good/deck.length*100);set('englishboost_'+mode,JSON.stringify({pct,good,total:deck.length}));$('bigScore').textContent=pct+'%';$('resultText').textContent=good+' bonnes réponses sur '+deck.length;$('resultMode').textContent=(mode==='qcm'?'Mode QCM':'Mode difficile')+' • '+(dir==='en-fr'?'Anglais → Français':'Français → Anglais');show('result');updateHome()}
+function renderCustom(){let list=custom(),box=$('customList');$('customCount').textContent=list.length;$('emptyCustom').classList.toggle('hidden',list.length>0);box.innerHTML='';list.forEach((it,i)=>{let row=document.createElement('div');row.className='wordItem';let txt=document.createElement('div');txt.className='wordText';txt.innerHTML='<b></b><div></div><small></small>';txt.children[0].textContent=it.en;txt.children[1].textContent=it.fr;txt.children[2].textContent=it.group||'Mes mots';let del=document.createElement('button');del.className='deleteBtn';del.textContent='Supprimer';del.onclick=()=>{let l=custom();l.splice(i,1);saveCustom(l);renderCustom();updateHome()};row.append(txt,del);box.appendChild(row)})}
+function addWord(){let en=$('newEn').value.trim(),fr=$('newFr').value.trim(),group=$('newGroup').value.trim()||'Mes mots',m=$('addMessage');if(!en||!fr){m.className='feedback bad';m.textContent='Ajoute le mot anglais et sa traduction.';return}let l=custom();l.push({en,fr,group});saveCustom(l);$('newEn').value='';$('newFr').value='';$('newGroup').value='';m.className='feedback good';m.textContent='✓ Mot ajouté au quiz.';renderCustom();updateHome()}
+function exportData(){let blob=new Blob([JSON.stringify({customVocabulary:custom()},null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),x=document.createElement('a');x.href=u;x.download='english-boost-vocabulaire.json';x.click();URL.revokeObjectURL(u)}
+function importData(file){let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result),arr=Array.isArray(d)?d:d.customVocabulary;if(!Array.isArray(arr))throw 0;let clean=arr.filter(x=>x&&x.en&&x.fr).map(x=>({en:String(x.en).trim(),fr:String(x.fr).trim(),group:String(x.group||'Mes mots').trim()}));saveCustom(custom().concat(clean));renderCustom();updateHome();alert(clean.length+' mot(s) importé(s).')}catch(e){alert('Fichier invalide.')}};r.readAsText(file)}
+document.addEventListener('DOMContentLoaded',()=>{$$('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;$$('[data-mode]').forEach(x=>x.classList.toggle('active',x===b))});$$('[data-dir]').forEach(b=>b.onclick=()=>{dir=b.dataset.dir;$$('[data-dir]').forEach(x=>x.classList.toggle('active',x===b))});$('start').onclick=start;$('next').onclick=advance;$('back').onclick=()=>{show('home');updateHome()};$('restart').onclick=start;$('homeBtn').onclick=()=>{show('home');updateHome()};$('revealBtn').onclick=()=>{$('revealed').textContent=a(deck[index]);$('revealed').classList.remove('hidden');$('selfButtons').classList.remove('hidden');$('revealBtn').classList.add('hidden')};$('knew').onclick=()=>{good++;advance()};$('nope').onclick=advance;$('navHome').onclick=()=>{show('home');updateHome()};$('navSources').onclick=()=>{show('sources');renderCustom()};$('addWord').onclick=addWord;$('exportBtn').onclick=exportData;$('importFile').onchange=e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value=''};updateHome();renderCustom()});
